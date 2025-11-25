@@ -2,7 +2,9 @@ import { useState, useCallback } from "react";
 import { AppMode, Message, FileTransfer } from "./types";
 import { generateId, base64ToAb } from "./utils/common";
 import { usePeerConnection } from "./hooks/usePeerConnection";
+import { useVoiceConnection } from "./hooks/useVoiceConnection";
 import { GlobalContext } from "./context/GlobalContext";
+import { Header } from "./components/Header";
 import { HomeScreen } from "./screens/Home";
 import { HostScreen } from "./screens/Host";
 import { SlaveScreen } from "./screens/Slave";
@@ -36,15 +38,46 @@ export default function App() {
     [],
   );
 
+  const {
+    createConnection,
+    completeConnection,
+    sendMessage: sendMainMessage,
+    connectionCode,
+    connectionStatus,
+  } = usePeerConnection(
+    (data) => handleDataReceived(data),
+    () => setMode("CHAT"),
+  );
+
+  const {
+    voiceStatus,
+    startVoiceCall,
+    acceptVoiceCall,
+    endVoiceCall,
+    handleIncomingOffer,
+    handleIncomingAnswer,
+    handleEndSignal,
+    remoteAudioStream,
+  } = useVoiceConnection(sendMainMessage);
+
   const handleDataReceived = useCallback(
     (dataStr: string) => {
       try {
         const msg: Message = JSON.parse(dataStr);
 
+        if (msg.type === "VOICE_SIGNAL" && msg.voiceSignal) {
+          const vs = msg.voiceSignal;
+          if (vs.type === "offer")
+            handleIncomingOffer(vs.sdp!, vs.candidates || []);
+          if (vs.type === "answer")
+            handleIncomingAnswer(vs.sdp!, vs.candidates || []);
+          if (vs.type === "end") handleEndSignal();
+          return;
+        }
+
         if (msg.type === "TEXT") {
           addMessage({ ...msg, sender: "STRANGER" });
         } else if (msg.type === "FILE_INFO" && msg.fileInfo) {
-          // Init file download
           updateFileTransfer(msg.fileInfo.id, {
             id: msg.fileInfo.id,
             name: msg.fileInfo.name,
@@ -61,7 +94,6 @@ export default function App() {
             fileInfo: msg.fileInfo,
           });
         } else if (msg.type === "FILE_CHUNK" && msg.chunk) {
-          // Handle chunk
           setFileTransfers((prev) => {
             const ft = prev[msg.chunk!.fileId];
             if (!ft) return prev;
@@ -95,20 +127,14 @@ export default function App() {
         console.error("Failed to parse message", e);
       }
     },
-    [addMessage, updateFileTransfer],
+    [
+      addMessage,
+      updateFileTransfer,
+      handleIncomingOffer,
+      handleIncomingAnswer,
+      handleEndSignal,
+    ],
   );
-
-  const onConnected = useCallback(() => {
-    setMode("CHAT");
-  }, []);
-
-  const {
-    createConnection,
-    completeConnection,
-    sendMessage,
-    connectionCode,
-    connectionStatus,
-  } = usePeerConnection(handleDataReceived, onConnected);
 
   return (
     <GlobalContext.Provider
@@ -121,12 +147,19 @@ export default function App() {
         updateFileTransfer,
         createConnection,
         completeConnection,
-        sendMessage,
+        sendMessage: sendMainMessage,
         connectionCode,
         connectionStatus,
+        // Voice
+        voiceStatus,
+        startVoiceCall,
+        acceptVoiceCall,
+        endVoiceCall,
+        remoteAudioStream,
       }}
     >
-      <main className="flex-1 flex overflow-hidden relative">
+      <Header onBack={() => setMode("HOME")} />
+      <main className="flex-1 flex overflow-hidden relative bg-stone-900">
         {mode === "HOME" && <HomeScreen />}
         {mode === "HOST" && <HostScreen />}
         {mode === "SLAVE" && <SlaveScreen />}

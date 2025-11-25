@@ -1,16 +1,34 @@
 import React, { useContext, useRef, useState, useEffect } from "react";
 import { GlobalContext } from "../context/GlobalContext";
 import { ChatMessage } from "../components/ChatMessage";
-import { Send, Plus } from "lucide-react";
+import { Send, Plus, Phone, PhoneOff, Mic } from "lucide-react";
 import { generateId, abToBase64 } from "../utils/common";
 import { Message } from "../types";
 
 export const ChatScreen = () => {
-  const { messages, addMessage, sendMessage, updateFileTransfer } =
-    useContext(GlobalContext);
+  const {
+    messages,
+    addMessage,
+    sendMessage,
+    updateFileTransfer,
+    voiceStatus,
+    startVoiceCall,
+    acceptVoiceCall,
+    endVoiceCall,
+    remoteAudioStream,
+  } = useContext(GlobalContext);
+
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (remoteAudioStream && audioRef.current) {
+      audioRef.current.srcObject = remoteAudioStream;
+      audioRef.current.play().catch(console.error);
+    }
+  }, [remoteAudioStream]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -67,43 +85,84 @@ export const ChatScreen = () => {
     const reader = new FileReader();
 
     reader.onload = (evt) => {
-      if (!evt.target?.result) return;
-      const chunk = evt.target.result as ArrayBuffer;
-      const chunkMsg: Message = {
-        id: generateId(),
-        sender: "ME",
-        type: "FILE_CHUNK",
-        timestamp: Date.now(),
-        chunk: {
-          fileId,
-          index,
-          data: abToBase64(chunk),
-        },
-      };
-      sendMessage(chunkMsg);
-      offset += chunk.byteLength;
-      index++;
-      updateFileTransfer(fileId, { receivedSize: offset });
-
-      if (offset < file.size) readNextChunk();
-      else updateFileTransfer(fileId, { status: "completed" });
+      if (evt.target?.result) {
+        const chunk = evt.target.result as ArrayBuffer;
+        const chunkMsg: Message = {
+          id: generateId(),
+          sender: "ME",
+          type: "FILE_CHUNK",
+          timestamp: Date.now(),
+          chunk: {
+            fileId,
+            index,
+            data: abToBase64(chunk),
+          },
+        };
+        sendMessage(chunkMsg);
+        offset += chunk.byteLength;
+        index++;
+        updateFileTransfer(fileId, { receivedSize: offset });
+        if (offset < file.size) readNextChunk();
+        else updateFileTransfer(fileId, { status: "completed" });
+      }
     };
-
     const readNextChunk = () => {
       const slice = file.slice(offset, offset + CHUNK_SIZE);
       reader.readAsArrayBuffer(slice);
     };
-
     readNextChunk();
   };
 
   return (
-    <div className="flex flex-col flex-1 max-w-4xl mx-auto w-full bg-stone-900 h-full">
-      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent">
-        <div className="space-y-4 pb-4">
+    <div className="flex flex-col flex-1 max-w-4xl mx-auto w-full bg-stone-900 h-full relative">
+      <audio ref={audioRef} className="hidden" />
+
+      <div className="absolute top-0 left-0 right-0 z-20">
+        {voiceStatus !== "idle" && (
+          <div className="bg-stone-800 border-b border-stone-700 p-3 flex items-center justify-between shadow-lg animate-in slide-in-from-top-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-stone-700 p-2 rounded-full relative">
+                <Mic size={20} className="text-white" />
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+              </div>
+              <div>
+                <h3 className="font-bold text-white text-sm">Voice Chat</h3>
+                <p className="text-xs text-stone-400 flex items-center gap-1">
+                  {voiceStatus === "calling" && "Calling..."}
+                  {voiceStatus === "incoming" && "Incoming Call..."}
+                  {voiceStatus === "connected" && "Connected"}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {voiceStatus === "incoming" && (
+                <button
+                  onClick={acceptVoiceCall}
+                  className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-full transition"
+                >
+                  <Phone size={20} />
+                </button>
+              )}
+              <button
+                onClick={endVoiceCall}
+                className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-full transition"
+              >
+                <PhoneOff size={20} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent pt-16">
+        <div className="space-y-6 pb-4">
           {messages.length === 0 && (
             <div className="text-center text-stone-500 mt-20 text-sm">
               <p>Encrypted connection established.</p>
+              <p>Say hello! 👋</p>
             </div>
           )}
           {messages.map((msg) => (
@@ -113,11 +172,22 @@ export const ChatScreen = () => {
         </div>
       </div>
 
-      <div className="p-3 bg-stone-950 border-t border-stone-800">
+      <div className="p-4 border-t border-stone-800/50 backdrop-blur-lg">
         <form
           onSubmit={handleSendText}
-          className="flex gap-2 items-center max-w-4xl mx-auto"
+          className="flex gap-2 items-end max-w-4xl mx-auto"
         >
+          {voiceStatus === "idle" && (
+            <button
+              type="button"
+              onClick={startVoiceCall}
+              className="p-3 bg-stone-800 hover:bg-green-600 text-stone-300 hover:text-white rounded-xl transition-colors flex-shrink-0"
+              title="Start Voice Chat"
+            >
+              <Phone size={20} />
+            </button>
+          )}
+
           <input
             ref={fileInputRef}
             type="file"
@@ -127,26 +197,28 @@ export const ChatScreen = () => {
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded transition-colors flex-shrink-0"
+            className="p-3 bg-stone-800 hover:bg-stone-700 text-stone-300 rounded-xl transition-colors flex-shrink-0"
             title="Send File"
           >
-            <Plus size={18} />
+            <Plus size={20} />
           </button>
 
-          <input
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            className="flex-1 p-2 bg-stone-900 border border-stone-700 rounded text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-1 focus:ring-stone-500 text-sm"
-            placeholder="Type message..."
-            autoComplete="off"
-          />
+          <div className="flex-1 relative">
+            <input
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              className="w-full p-3 bg-stone-900 border border-stone-700 rounded-xl focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all text-stone-100 placeholder-stone-500"
+              placeholder="Type a message..."
+              autoComplete="off"
+            />
+          </div>
 
           <button
             type="submit"
             disabled={!inputText.trim()}
-            className="p-2 bg-stone-700 hover:bg-stone-600 rounded text-stone-100 disabled:opacity-50 transition-colors flex-shrink-0"
+            className="p-3 text-stone-950 rounded-xl bg-sky-500 disabled:opacity-50 transition-all font-bold flex-shrink-0"
           >
-            <Send size={18} />
+            <Send size={20} />
           </button>
         </form>
       </div>
