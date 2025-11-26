@@ -7,7 +7,7 @@ import {
   encryptMessage,
   decryptMessage,
 } from "../utils/crypto";
-import { toBase64, fromBase64 } from "../utils/common";
+import { compressData, decompressData } from "../utils/common";
 
 export const usePeerConnection = (
   onMessageReceived: (data: string) => void,
@@ -78,12 +78,12 @@ export const usePeerConnection = (
               sdp: pc.current!.localDescription!,
               keyJson: jwk,
             };
-            setConnectionCode(toBase64(JSON.stringify(payload)));
+            setConnectionCode(compressData(payload));
             setConnectionStatus("waiting");
           });
         } else {
           const payload = { sdp: pc.current.localDescription };
-          setConnectionCode(toBase64(JSON.stringify(payload)));
+          setConnectionCode(compressData(payload));
           setConnectionStatus("waiting");
         }
       }
@@ -99,7 +99,7 @@ export const usePeerConnection = (
       pc.current.ondatachannel = (e) => setupDataChannel(e.channel);
 
       try {
-        const data: ConnectionData = JSON.parse(fromBase64(remoteCode));
+        const data: ConnectionData = decompressData(remoteCode);
         if (data.keyJson) {
           encryptionKey.current = await importKey(data.keyJson);
         }
@@ -118,7 +118,7 @@ export const usePeerConnection = (
   const completeConnection = async (answerCode: string) => {
     if (!pc.current) return;
     try {
-      const data = JSON.parse(fromBase64(answerCode));
+      const data = decompressData(answerCode);
       await pc.current.setRemoteDescription(
         new RTCSessionDescription(data.sdp),
       );
