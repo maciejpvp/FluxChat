@@ -8,11 +8,13 @@ import {
   decryptMessage,
 } from "../utils/crypto";
 import { compressData, decompressData } from "../utils/common";
+import { useStunStore } from "../stores/useStunStore";
 
 export const usePeerConnection = (
   onMessageReceived: (data: string) => void,
   onConnected: () => void,
 ) => {
+  const stunConfig = useStunStore((state) => state.config);
   const [connectionCode, setConnectionCode] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<
     "idle" | "generating" | "waiting" | "connected"
@@ -61,20 +63,7 @@ export const usePeerConnection = (
     cleanup();
     setConnectionStatus("generating");
 
-    const config: RTCConfiguration = {
-      iceServers: [
-        {
-          urls: "stun:relay1.expressturn.com:3480",
-        },
-        {
-          urls: "turn:relay1.expressturn.com:3480?transport=tcp",
-          username: "000000002079469016",
-          credential: "tfkqDXh0R7OgxGs3h9V6HcJ4mjo=",
-        },
-      ],
-    };
-
-    pc.current = new RTCPeerConnection(config);
+    pc.current = new RTCPeerConnection(stunConfig);
 
     pc.current.onicecandidate = (e) => {
       if (!e.candidate && pc.current?.localDescription) {

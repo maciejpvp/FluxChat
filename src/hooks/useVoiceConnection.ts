@@ -1,20 +1,13 @@
 import { useState, useRef, useCallback } from "react";
 import { VoiceStatus, Message } from "../types";
 import { generateId } from "../utils/common";
+import { useStunStore } from "../stores/useStunStore";
 
-const STUN_SERVERS = {
-  iceServers: [{ urls: "stun:relay1.expressturn.com:3480" },
-  {
-    urls: "turn:relay1.expressturn.com:3480?transport=tcp",
-    username: "000000002079469016",
-    credential: "tfkqDXh0R7OgxGs3h9V6HcJ4mjo=",
-  },
-  ],
-};
 
 export const useVoiceConnection = (
   sendMessage: (msg: any) => Promise<void>,
 ) => {
+  const stunConfig = useStunStore((state) => state.config);
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>("idle");
   const [remoteAudioStream, setRemoteAudioStream] =
     useState<MediaStream | null>(null);
@@ -103,7 +96,7 @@ export const useVoiceConnection = (
     scope: "AUDIO" | "VIDEO",
     onTrack: (streams: readonly MediaStream[]) => void,
   ) => {
-    const peer = new RTCPeerConnection(STUN_SERVERS);
+    const peer = new RTCPeerConnection(stunConfig);
     const candidatesRef = scope === "AUDIO" ? audioCandidates : videoCandidates;
     candidatesRef.current = [];
 

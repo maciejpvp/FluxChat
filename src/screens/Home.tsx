@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import { GlobalContext } from "../context/GlobalContext";
 import { ActionButton } from "../components/ActionButton";
+import { AdvancedSettings } from "../components/AdvancedSettings";
 
 export const HomeScreen = () => {
   const { setMode, createConnection } = useContext(GlobalContext);
@@ -27,6 +28,8 @@ export const HomeScreen = () => {
         subtitle="Enter an invitation code"
         onClick={handleJoin}
       />
+
+      <AdvancedSettings />
     </div>
   );
 };
