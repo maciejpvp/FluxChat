@@ -1,7 +1,21 @@
 import React, { useContext, useRef, useState, useEffect } from "react";
 import { GlobalContext } from "../context/GlobalContext";
 import { ChatMessage } from "../components/ChatMessage";
-import { Send, Plus, Phone, PhoneOff, Mic } from "lucide-react";
+import {
+  Send,
+  Plus,
+  Phone,
+  PhoneOff,
+  PhoneIncoming,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Monitor,
+  MonitorOff,
+  Headphones,
+  VolumeX,
+} from "lucide-react";
 import { generateId, abToBase64 } from "../utils/common";
 import { Message } from "../types";
 
@@ -16,12 +30,22 @@ export const ChatScreen = () => {
     acceptVoiceCall,
     endVoiceCall,
     remoteAudioStream,
+    localVideoStream,
+    remoteVideoStream,
+    toggleCamera,
+    toggleScreenShare,
+    isMuted,
+    isDeafened,
+    toggleMute,
+    toggleDeaf,
   } = useContext(GlobalContext);
 
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (remoteAudioStream && audioRef.current) {
@@ -29,6 +53,26 @@ export const ChatScreen = () => {
       audioRef.current.play().catch(console.error);
     }
   }, [remoteAudioStream]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.muted = isDeafened;
+    }
+  }, [isDeafened]);
+
+  useEffect(() => {
+    if (localVideoStream && localVideoRef.current) {
+      localVideoRef.current.srcObject = localVideoStream;
+      localVideoRef.current.play().catch(console.error);
+    }
+  }, [localVideoStream]);
+
+  useEffect(() => {
+    if (remoteVideoStream && remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = remoteVideoStream;
+      remoteVideoRef.current.play().catch(console.error);
+    }
+  }, [remoteVideoStream]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -65,7 +109,7 @@ export const ChatScreen = () => {
         id: fileId,
         name: file.name,
         size: file.size,
-        mime: file.type,
+        type: file.type,
       },
     };
     sendMessage(infoMsg);
@@ -117,7 +161,7 @@ export const ChatScreen = () => {
     <div className="flex flex-col flex-1 max-w-4xl mx-auto w-full bg-stone-900 h-full relative">
       <audio ref={audioRef} className="hidden" />
 
-      <div className="absolute top-0 left-0 right-0 z-20">
+      <div className="absolute top-0 left-0 right-0 z-20 flex flex-col gap-2">
         {voiceStatus !== "idle" && (
           <div className="bg-stone-800 border-b border-stone-700 p-3 flex items-center justify-between shadow-lg animate-in slide-in-from-top-4">
             <div className="flex items-center gap-3">
@@ -138,12 +182,60 @@ export const ChatScreen = () => {
               </div>
             </div>
             <div className="flex gap-2">
+              {voiceStatus === "connected" && (
+                <>
+                  <button
+                    onClick={toggleMute}
+                    className={`p-2 rounded-full transition ${isMuted
+                      ? "bg-red-600 text-white"
+                      : "bg-stone-700 text-white hover:bg-stone-600"
+                      }`}
+                    title={isMuted ? "Unmute" : "Mute"}
+                  >
+                    {isMuted ? <MicOff size={20} /> : <Mic size={20} />}
+                  </button>
+                  <button
+                    onClick={toggleDeaf}
+                    className={`p-2 rounded-full transition ${isDeafened
+                      ? "bg-red-600 text-white"
+                      : "bg-stone-700 text-white hover:bg-stone-600"
+                      }`}
+                    title={isDeafened ? "Undeafen" : "Deafen"}
+                  >
+                    {isDeafened ? <VolumeX size={20} /> : <Headphones size={20} />}
+                  </button>
+                  <button
+                    onClick={() => toggleCamera()}
+                    className={`p-2 rounded-full transition ${localVideoStream
+                      ? "bg-white text-stone-900"
+                      : "bg-stone-700 text-white hover:bg-stone-600"
+                      }`}
+                    title="Toggle Camera"
+                  >
+                    {localVideoStream ? <Video size={20} /> : <VideoOff size={20} />}
+                  </button>
+                  <button
+                    onClick={() => toggleScreenShare()}
+                    className={`p-2 rounded-full transition ${localVideoStream?.getVideoTracks()[0]?.label.includes("screen")
+                      ? "bg-white text-stone-900"
+                      : "bg-stone-700 text-white hover:bg-stone-600"
+                      }`}
+                    title="Toggle Screen Share"
+                  >
+                    {localVideoStream?.getVideoTracks()[0]?.label.includes("screen") ? (
+                      <Monitor size={20} />
+                    ) : (
+                      <MonitorOff size={20} />
+                    )}
+                  </button>
+                </>
+              )}
               {voiceStatus === "incoming" && (
                 <button
                   onClick={acceptVoiceCall}
                   className="bg-green-600 hover:bg-green-700 text-white p-2 rounded-full transition"
                 >
-                  <Phone size={20} />
+                  <PhoneIncoming size={20} />
                 </button>
               )}
               <button
@@ -155,9 +247,41 @@ export const ChatScreen = () => {
             </div>
           </div>
         )}
+
+        {(localVideoStream || remoteVideoStream) && (
+          <div className="p-4 grid grid-cols-2 gap-4">
+            {localVideoStream && (
+              <div className="relative rounded-xl overflow-hidden bg-black aspect-video shadow-lg border border-stone-700">
+                <video
+                  ref={localVideoRef}
+                  muted
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  playsInline
+                />
+                <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-xs text-white">
+                  You
+                </div>
+              </div>
+            )}
+            {remoteVideoStream && (
+              <div className="relative rounded-xl overflow-hidden bg-black aspect-video shadow-lg border border-stone-700">
+                <video
+                  ref={remoteVideoRef}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  playsInline
+                />
+                <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-xs text-white">
+                  Remote
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent pt-16">
+      <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent pt-32">
         <div className="space-y-6 pb-4">
           {messages.length === 0 && (
             <div className="text-center text-stone-500 mt-20 text-sm">

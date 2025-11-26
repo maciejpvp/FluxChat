@@ -5,20 +5,21 @@ export interface Message {
   sender: 'ME' | 'STRANGER';
   type: 'TEXT' | 'FILE_INFO' | 'FILE_CHUNK' | 'VOICE_SIGNAL';
   timestamp: number;
-  content?: string; 
-  fileInfo?: { 
+  content?: string;
+  fileInfo?: {
     id: string;
     name: string;
     size: number;
-    mime: string;
-  }; 
-  chunk?: { 
+    type: string;
+  };
+  chunk?: {
     fileId: string;
     index: number;
-    data: string; 
+    data: string;
   };
   voiceSignal?: {
     type: 'offer' | 'answer' | 'end';
+    scope: 'AUDIO' | 'VIDEO';
     sdp?: RTCSessionDescriptionInit;
     candidates?: RTCIceCandidateInit[];
   };
@@ -31,12 +32,13 @@ export interface FileTransfer {
   receivedSize: number;
   chunks: ArrayBuffer[];
   status: 'uploading' | 'downloading' | 'completed';
+  progress?: number;
   blobUrl?: string;
 }
 
 export interface ConnectionData {
   sdp: RTCSessionDescriptionInit;
-  keyJson?: JsonWebKey; 
+  keyJson?: JsonWebKey;
 }
 
 export type VoiceStatus = 'idle' | 'calling' | 'incoming' | 'connected';

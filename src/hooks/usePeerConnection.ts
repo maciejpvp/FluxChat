@@ -22,6 +22,12 @@ export const usePeerConnection = (
   const dc = useRef<RTCDataChannel | null>(null);
   const encryptionKey = useRef<CryptoKey | null>(null);
 
+  const onMessageReceivedRef = useRef(onMessageReceived);
+  const onConnectedRef = useRef(onConnected);
+
+  onMessageReceivedRef.current = onMessageReceived;
+  onConnectedRef.current = onConnected;
+
   const cleanup = () => {
     if (dc.current) dc.current.close();
     if (pc.current) pc.current.close();
@@ -33,13 +39,13 @@ export const usePeerConnection = (
     channel.onopen = () => {
       console.log("Data channel open");
       setConnectionStatus("connected");
-      onConnected();
+      onConnectedRef.current();
     };
     channel.onmessage = async (e) => {
       if (encryptionKey.current) {
         try {
           const decrypted = await decryptMessage(e.data, encryptionKey.current);
-          onMessageReceived(decrypted);
+          onMessageReceivedRef.current(decrypted);
         } catch (err) {
           console.error("Failed to decrypt message", err);
         }

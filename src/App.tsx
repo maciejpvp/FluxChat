@@ -58,6 +58,14 @@ export default function App() {
     handleIncomingAnswer,
     handleEndSignal,
     remoteAudioStream,
+    localVideoStream,
+    remoteVideoStream,
+    toggleCamera,
+    toggleScreenShare,
+    isMuted,
+    isDeafened,
+    toggleMute,
+    toggleDeaf,
   } = useVoiceConnection(sendMainMessage);
 
   const handleDataReceived = useCallback(
@@ -68,10 +76,10 @@ export default function App() {
         if (msg.type === "VOICE_SIGNAL" && msg.voiceSignal) {
           const vs = msg.voiceSignal;
           if (vs.type === "offer")
-            handleIncomingOffer(vs.sdp!, vs.candidates || []);
+            handleIncomingOffer(vs.scope, vs.sdp!, vs.candidates || []);
           if (vs.type === "answer")
-            handleIncomingAnswer(vs.sdp!, vs.candidates || []);
-          if (vs.type === "end") handleEndSignal();
+            handleIncomingAnswer(vs.scope, vs.sdp!, vs.candidates || []);
+          if (vs.type === "end") handleEndSignal(vs.scope);
           return;
         }
 
@@ -156,6 +164,14 @@ export default function App() {
         acceptVoiceCall,
         endVoiceCall,
         remoteAudioStream,
+        localVideoStream,
+        remoteVideoStream,
+        toggleCamera,
+        toggleScreenShare,
+        isMuted,
+        isDeafened,
+        toggleMute,
+        toggleDeaf,
       }}
     >
       <Header onBack={() => setMode("HOME")} />
