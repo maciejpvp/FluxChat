@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { ChatMessage } from "../ChatMessage";
+import { ChatMessage } from "./ChatMessage";
 import { Message } from "../../types";
 
 interface MessageListProps {
@@ -14,10 +14,13 @@ export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
     }, [messages]);
 
     return (
-        <div className="flex-1 overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent pt-32">
-            <div className="space-y-6 pb-4">
+        <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent flex flex-col">
+            <div
+                className={`min-h-full flex flex-col p-4 gap-4 ${messages.length === 0 ? "justify-center" : "justify-end"
+                    }`}
+            >
                 {messages.length === 0 && (
-                    <div className="text-center text-stone-500 mt-20 text-sm">
+                    <div className="text-center text-stone-500 text-sm">
                         <p>Encrypted connection established.</p>
                         <p>Say hello! 👋</p>
                     </div>

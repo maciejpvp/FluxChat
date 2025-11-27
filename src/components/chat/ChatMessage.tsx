@@ -1,8 +1,8 @@
 import { useContext } from "react";
 import { Paperclip, Download, CheckCircle } from "lucide-react";
-import { Message } from "../types";
-import { GlobalContext } from "../context/GlobalContext";
-import { cn } from "../utils/common";
+import { Message } from "../../types";
+import { GlobalContext } from "../../context/GlobalContext";
+import { cn } from "../../utils/common";
 
 export const ChatMessage = ({ message }: { message: Message }) => {
   const { fileTransfers } = useContext(GlobalContext);
@@ -19,7 +19,7 @@ export const ChatMessage = ({ message }: { message: Message }) => {
   return (
     <div
       className={cn(
-        "flex flex-col mb-4 max-w-[85%]",
+        "flex flex-col max-w-[95%]",
         isMe ? "items-end self-end" : "items-start self-start",
       )}
     >
