@@ -14,7 +14,7 @@ export const HostScreen = () => {
         {connectionStatus === "generating" ? (
           <div className="py-12 flex flex-col items-center justify-center text-stone-400 gap-4">
             <Loader2 className="animate-spin text-accent" size={32} />
-            <span>Generating secure keys...</span>
+            <span>Generating invite code...</span>
           </div>
         ) : (
           <div>

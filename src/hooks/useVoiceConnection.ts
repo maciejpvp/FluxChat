@@ -16,17 +16,25 @@ export const useVoiceConnection = (
   );
   const [remoteVideoStream, setRemoteVideoStream] =
     useState<MediaStream | null>(null);
+  const [localScreenStream, setLocalScreenStream] = useState<MediaStream | null>(
+    null,
+  );
+  const [remoteScreenStream, setRemoteScreenStream] =
+    useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isDeafened, setIsDeafened] = useState(false);
 
   const audioPc = useRef<RTCPeerConnection | null>(null);
   const videoPc = useRef<RTCPeerConnection | null>(null);
+  const screenPc = useRef<RTCPeerConnection | null>(null);
 
   const localStream = useRef<MediaStream | null>(null);
   const localVideo = useRef<MediaStream | null>(null);
+  const localScreen = useRef<MediaStream | null>(null);
 
   const audioCandidates = useRef<RTCIceCandidateInit[]>([]);
   const videoCandidates = useRef<RTCIceCandidateInit[]>([]);
+  const screenCandidates = useRef<RTCIceCandidateInit[]>([]);
 
   const stopVoice = useCallback(() => {
     if (localStream.current) {
@@ -45,9 +53,19 @@ export const useVoiceConnection = (
       videoPc.current.close();
       videoPc.current = null;
     }
+    if (screenPc.current) {
+      screenPc.current.close();
+      screenPc.current = null;
+    }
+    if (localScreen.current) {
+      localScreen.current.getTracks().forEach((t) => t.stop());
+      localScreen.current = null;
+    }
     setRemoteAudioStream(null);
     setRemoteVideoStream(null);
     setLocalVideoStream(null);
+    setRemoteScreenStream(null);
+    setLocalScreenStream(null);
     setVoiceStatus("idle");
     setIsMuted(false);
     setIsDeafened(false);
@@ -55,7 +73,7 @@ export const useVoiceConnection = (
 
   const sendSignal = useCallback(
     async (
-      scope: "AUDIO" | "VIDEO",
+      scope: "AUDIO" | "VIDEO" | "SCREEN",
       type: "offer" | "answer" | "end",
       sdp?: any,
       candidates?: any[],
@@ -93,11 +111,14 @@ export const useVoiceConnection = (
   };
 
   const setupPeerConnection = (
-    scope: "AUDIO" | "VIDEO",
+    scope: "AUDIO" | "VIDEO" | "SCREEN",
     onTrack: (streams: readonly MediaStream[]) => void,
   ) => {
     const peer = new RTCPeerConnection(stunConfig);
-    const candidatesRef = scope === "AUDIO" ? audioCandidates : videoCandidates;
+    let candidatesRef;
+    if (scope === "AUDIO") candidatesRef = audioCandidates;
+    else if (scope === "VIDEO") candidatesRef = videoCandidates;
+    else candidatesRef = screenCandidates;
     candidatesRef.current = [];
 
     peer.onicecandidate = (event) => {
@@ -120,7 +141,8 @@ export const useVoiceConnection = (
     };
 
     if (scope === "AUDIO") audioPc.current = peer;
-    else videoPc.current = peer;
+    else if (scope === "VIDEO") videoPc.current = peer;
+    else screenPc.current = peer;
 
     return peer;
   };
@@ -176,33 +198,33 @@ export const useVoiceConnection = (
   };
 
   const toggleScreenShare = async () => {
-    if (localVideo.current) {
+    if (localScreen.current) {
       // Stop screen share
-      localVideo.current.getTracks().forEach((t) => t.stop());
-      localVideo.current = null;
-      setLocalVideoStream(null);
+      localScreen.current.getTracks().forEach((t) => t.stop());
+      localScreen.current = null;
+      setLocalScreenStream(null);
 
-      if (videoPc.current) {
-        videoPc.current.close();
-        videoPc.current = null;
-        await sendSignal("VIDEO", "end");
+      if (screenPc.current) {
+        screenPc.current.close();
+        screenPc.current = null;
+        await sendSignal("SCREEN", "end");
       }
     } else {
       // Start screen share
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        localVideo.current = stream;
-        setLocalVideoStream(stream);
+        localScreen.current = stream;
+        setLocalScreenStream(stream);
 
         // Handle user stopping screen share via browser UI
         stream.getVideoTracks()[0].onended = () => {
-          if (localVideo.current === stream) {
+          if (localScreen.current === stream) {
             toggleScreenShare();
           }
         };
 
-        const peer = setupPeerConnection("VIDEO", (streams) => {
-          setRemoteVideoStream(streams[0]);
+        const peer = setupPeerConnection("SCREEN", (streams) => {
+          setRemoteScreenStream(streams[0]);
         });
 
         stream.getTracks().forEach(track => peer.addTrack(track, stream));
@@ -210,7 +232,7 @@ export const useVoiceConnection = (
         const offer = await peer.createOffer();
         await peer.setLocalDescription(offer);
         await waitForIceGatheringComplete(peer);
-        await sendSignal("VIDEO", "offer", peer.localDescription, videoCandidates.current);
+        await sendSignal("SCREEN", "offer", peer.localDescription, screenCandidates.current);
 
       } catch (e) {
         console.error("Failed to access screen share", e);
@@ -253,7 +275,7 @@ export const useVoiceConnection = (
 
   const handleIncomingOffer = useCallback(
     async (
-      scope: "AUDIO" | "VIDEO",
+      scope: "AUDIO" | "VIDEO" | "SCREEN",
       offerSdp: RTCSessionDescriptionInit,
       candidates: RTCIceCandidateInit[],
     ) => {
@@ -261,11 +283,12 @@ export const useVoiceConnection = (
         setVoiceStatus("incoming");
         (window as any).__pendingAudioOffer = { sdp: offerSdp, candidates };
       } else {
-        // Auto-accept video offers if we are in a call
+        // Auto-accept video/screen offers if we are in a call
         if (voiceStatus === "connected" || voiceStatus === "calling") {
           try {
-            const peer = setupPeerConnection("VIDEO", (streams) => {
-              setRemoteVideoStream(streams[0]);
+            const peer = setupPeerConnection(scope, (streams) => {
+              if (scope === "VIDEO") setRemoteVideoStream(streams[0]);
+              else setRemoteScreenStream(streams[0]);
             });
             await peer.setRemoteDescription(new RTCSessionDescription(offerSdp));
             for (const cand of candidates) {
@@ -274,9 +297,9 @@ export const useVoiceConnection = (
             const answer = await peer.createAnswer();
             await peer.setLocalDescription(answer);
             await waitForIceGatheringComplete(peer);
-            await sendSignal("VIDEO", "answer", peer.localDescription, videoCandidates.current);
+            await sendSignal(scope, "answer", peer.localDescription, scope === "VIDEO" ? videoCandidates.current : screenCandidates.current);
           } catch (e) {
-            console.error("Failed to accept video offer", e);
+            console.error(`Failed to accept ${scope} offer`, e);
           }
         }
       }
@@ -334,11 +357,15 @@ export const useVoiceConnection = (
 
   const handleIncomingAnswer = useCallback(
     async (
-      scope: "AUDIO" | "VIDEO",
+      scope: "AUDIO" | "VIDEO" | "SCREEN",
       answerSdp: RTCSessionDescriptionInit,
       candidates: RTCIceCandidateInit[],
     ) => {
-      const peer = scope === "AUDIO" ? audioPc.current : videoPc.current;
+      let peer;
+      if (scope === "AUDIO") peer = audioPc.current;
+      else if (scope === "VIDEO") peer = videoPc.current;
+      else peer = screenPc.current;
+
       if (!peer) {
         return;
       }
@@ -367,19 +394,27 @@ export const useVoiceConnection = (
     },
     handleIncomingOffer,
     handleIncomingAnswer,
-    handleEndSignal: (scope: "AUDIO" | "VIDEO") => {
+    handleEndSignal: (scope: "AUDIO" | "VIDEO" | "SCREEN") => {
       if (scope === "AUDIO") stopVoice();
-      else {
+      else if (scope === "VIDEO") {
         if (videoPc.current) {
           videoPc.current.close();
           videoPc.current = null;
         }
         setRemoteVideoStream(null);
+      } else {
+        if (screenPc.current) {
+          screenPc.current.close();
+          screenPc.current = null;
+        }
+        setRemoteScreenStream(null);
       }
     },
     remoteAudioStream,
     localVideoStream,
     remoteVideoStream,
+    localScreenStream,
+    remoteScreenStream,
     toggleCamera,
     toggleScreenShare,
     isMuted,

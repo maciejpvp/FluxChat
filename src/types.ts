@@ -19,7 +19,7 @@ export interface Message {
   };
   voiceSignal?: {
     type: 'offer' | 'answer' | 'end';
-    scope: 'AUDIO' | 'VIDEO';
+    scope: 'AUDIO' | 'VIDEO' | 'SCREEN';
     sdp?: RTCSessionDescriptionInit;
     candidates?: RTCIceCandidateInit[];
   };

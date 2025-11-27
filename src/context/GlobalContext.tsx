@@ -22,6 +22,8 @@ interface GlobalContextType {
   remoteAudioStream: MediaStream | null;
   localVideoStream: MediaStream | null;
   remoteVideoStream: MediaStream | null;
+  localScreenStream: MediaStream | null;
+  remoteScreenStream: MediaStream | null;
   toggleCamera: () => Promise<void>;
   toggleScreenShare: () => Promise<void>;
   isMuted: boolean;
