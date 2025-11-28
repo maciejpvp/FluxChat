@@ -3,8 +3,19 @@ import { Paperclip, Download, CheckCircle } from "lucide-react";
 import { Message } from "../../types";
 import { GlobalContext } from "../../context/GlobalContext";
 import { cn } from "../../utils/common";
+import { getBubbleRounding } from "../../utils/MessagesHelpers";
 
-export const ChatMessage = ({ message }: { message: Message }) => {
+type MessagePosition = "single" | "first" | "middle" | "last";
+
+export const ChatMessage = ({
+  message,
+  showHeader = true,
+  position = "single",
+}: {
+  message: Message;
+  showHeader?: boolean;
+  position?: MessagePosition;
+}) => {
   const { fileTransfers } = useContext(GlobalContext);
   const isMe = message.sender === "ME";
   const ft =
@@ -21,26 +32,28 @@ export const ChatMessage = ({ message }: { message: Message }) => {
       className={cn(
         "flex flex-col max-w-[95%]",
         isMe ? "items-end self-end" : "items-start self-start",
+        showHeader ? "" : "-mt-3",
       )}
     >
-      <div className="text-[10px] text-stone-500 mb-1 px-1 flex gap-2">
-        <span className="font-bold text-stone-400">
-          {isMe ? "You" : "Friend"}
-        </span>
-        <span>
-          {new Date(message.timestamp).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </span>
-      </div>
+      {showHeader && (
+        <div className="text-[10px] text-stone-500 mb-1 px-1 flex gap-2">
+          <span className="font-bold text-stone-400">
+            {isMe ? "You" : "Friend"}
+          </span>
+          <span>
+            {new Date(message.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+        </div>
+      )}
 
       <div
         className={cn(
-          "p-3 rounded-2xl shadow-sm break-words",
-          isMe
-            ? "bg-sky-800 text-white rounded-tr-sm"
-            : "bg-sky-800 text-stone-200 rounded-tl-sm",
+          "px-3 py-2 shadow-sm break-words",
+          "bg-sky-800 text-stone-200",
+          getBubbleRounding(position, isMe),
         )}
       >
         {message.type === "TEXT" && (
