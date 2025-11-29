@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 export interface IceServerConfig {
     urls: string;
@@ -16,6 +16,8 @@ interface StunStore {
     resetToDefaults: () => void;
 }
 
+const STORAGE_KEY = "stunConfig";
+
 const DEFAULT_CONFIG: StunConfig = {
     iceServers: [
         { urls: "stun:relay1.expressturn.com:3480" },
@@ -27,8 +29,26 @@ const DEFAULT_CONFIG: StunConfig = {
     ],
 };
 
+const loadConfig = (): StunConfig => {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return DEFAULT_CONFIG;
+        return JSON.parse(raw);
+    } catch {
+        return DEFAULT_CONFIG;
+    }
+};
+
 export const useStunStore = create<StunStore>((set) => ({
-    config: DEFAULT_CONFIG,
-    setConfig: (config) => set({ config }),
-    resetToDefaults: () => set({ config: DEFAULT_CONFIG }),
+    config: loadConfig(),
+
+    setConfig: (config) => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+        set({ config });
+    },
+
+    resetToDefaults: () => {
+        localStorage.removeItem(STORAGE_KEY);
+        set({ config: DEFAULT_CONFIG });
+    },
 }));
