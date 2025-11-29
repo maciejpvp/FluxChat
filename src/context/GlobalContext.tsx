@@ -13,6 +13,7 @@ interface GlobalContextType {
   sendMessage: (payload: any) => Promise<void>;
   connectionCode: string;
   connectionStatus: 'idle' | 'generating' | 'waiting' | 'connected';
+  remoteTypingText: string | null;
 
   // Voice Chat
   voiceStatus: VoiceStatus;

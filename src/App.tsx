@@ -16,6 +16,7 @@ export default function App() {
   const [fileTransfers, setFileTransfers] = useState<
     Record<string, FileTransfer>
   >({});
+  const [remoteTypingText, setRemoteTypingText] = useState<string | null>(null);
 
   const addMessage = useCallback((msg: Message) => {
     setMessages((prev) => [...prev, msg]);
@@ -82,6 +83,11 @@ export default function App() {
           if (vs.type === "answer")
             handleIncomingAnswer(vs.scope, vs.sdp!, vs.candidates || []);
           if (vs.type === "end") handleEndSignal(vs.scope);
+          return;
+        }
+
+        if (msg.type === "TYPING") {
+          setRemoteTypingText(msg.content || null);
           return;
         }
 
@@ -160,6 +166,7 @@ export default function App() {
         sendMessage: sendMainMessage,
         connectionCode,
         connectionStatus,
+        remoteTypingText,
         // Voice
         voiceStatus,
         startVoiceCall,

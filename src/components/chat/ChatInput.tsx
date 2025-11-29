@@ -7,6 +7,7 @@ interface ChatInputProps {
     startVoiceCall: () => void;
     onSendText: (text: string) => void;
     onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onTyping: (text: string) => void;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -14,6 +15,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     startVoiceCall,
     onSendText,
     onFileUpload,
+    onTyping,
 }) => {
     const [inputText, setInputText] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -23,6 +25,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         if (!inputText.trim()) return;
         onSendText(inputText);
         setInputText("");
+        onTyping("");
     };
 
     return (
@@ -60,7 +63,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <div className="flex-1 relative">
                     <input
                         value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
+                        onChange={(e) => {
+                            setInputText(e.target.value);
+                            onTyping(e.target.value);
+                        }}
                         className="w-full p-3 bg-stone-900 border border-stone-700 rounded-xl focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 transition-all text-stone-100 placeholder-stone-500"
                         placeholder="Type a message..."
                         autoComplete="off"

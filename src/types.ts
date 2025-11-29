@@ -3,7 +3,7 @@ export type AppMode = 'HOME' | 'HOST' | 'SLAVE' | 'CHAT';
 export interface Message {
   id: string;
   sender: 'ME' | 'STRANGER';
-  type: 'TEXT' | 'FILE_INFO' | 'FILE_CHUNK' | 'VOICE_SIGNAL';
+  type: 'TEXT' | 'FILE_INFO' | 'FILE_CHUNK' | 'VOICE_SIGNAL' | 'TYPING';
   timestamp: number;
   content?: string;
   fileInfo?: {

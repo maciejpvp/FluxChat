@@ -28,6 +28,7 @@ export const ChatScreen = () => {
     isDeafened,
     toggleMute,
     toggleDeaf,
+    remoteTypingText,
   } = useContext(GlobalContext);
 
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -120,6 +121,17 @@ export const ChatScreen = () => {
     readNextChunk();
   };
 
+  const handleTyping = (text: string) => {
+    const msg: Message = {
+      id: generateId(),
+      sender: "ME",
+      type: "TYPING",
+      timestamp: Date.now(),
+      content: text,
+    };
+    sendMessage(msg);
+  };
+
   return (
     <div className="flex flex-col flex-1 max-w-4xl mx-auto w-full bg-stone-900 h-full relative">
       <audio ref={audioRef} className="hidden" />
@@ -147,13 +159,16 @@ export const ChatScreen = () => {
         />
       </div>
 
-      <MessageList messages={messages} />
+      <div className="flex-1 overflow-y-auto relative">
+        <MessageList messages={messages} typingText={remoteTypingText} />
+      </div>
 
       <ChatInput
         voiceStatus={voiceStatus}
         startVoiceCall={startVoiceCall}
         onSendText={handleSendText}
         onFileUpload={handleFileUpload}
+        onTyping={handleTyping}
       />
     </div>
   );

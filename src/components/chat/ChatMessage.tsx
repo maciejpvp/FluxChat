@@ -11,10 +11,12 @@ export const ChatMessage = ({
   message,
   showHeader = true,
   position = "single",
+  isTyping = false,
 }: {
   message: Message;
   showHeader?: boolean;
   position?: MessagePosition;
+  isTyping?: boolean;
 }) => {
   const { fileTransfers } = useContext(GlobalContext);
   const isMe = message.sender === "ME";
@@ -33,6 +35,7 @@ export const ChatMessage = ({
         "flex flex-col max-w-[95%]",
         isMe ? "items-end self-end" : "items-start self-start",
         showHeader ? "" : "-mt-3",
+        isTyping && "opacity-80"
       )}
     >
       {showHeader && (
@@ -52,13 +55,16 @@ export const ChatMessage = ({
       <div
         className={cn(
           "px-3 py-2 shadow-sm break-words",
-          "bg-sky-800 text-stone-200",
+          isTyping
+            ? "bg-stone-800 text-stone-400 italic border border-stone-700/50"
+            : "bg-sky-800 text-stone-200",
           getBubbleRounding(position, isMe),
         )}
       >
-        {message.type === "TEXT" && (
+        {(message.type === "TEXT" || isTyping) && (
           <p className="whitespace-pre-wrap leading-relaxed text-sm">
             {message.content}
+            {isTyping && <span className="animate-pulse">|</span>}
           </p>
         )}
 
