@@ -35,7 +35,7 @@ export const ChatMessage = ({
         "flex flex-col max-w-[95%]",
         isMe ? "items-end self-end" : "items-start self-start",
         showHeader ? "" : "-mt-3",
-        isTyping && "opacity-80"
+        isTyping && "opacity-80",
       )}
     >
       {showHeader && (
@@ -54,7 +54,7 @@ export const ChatMessage = ({
 
       <div
         className={cn(
-          "px-3 py-2 shadow-sm break-words",
+          "px-3 py-2 shadow-sm break-words max-w-72",
           isTyping
             ? "bg-stone-800 text-stone-400 italic border border-stone-700/50"
             : "bg-sky-800 text-stone-200",

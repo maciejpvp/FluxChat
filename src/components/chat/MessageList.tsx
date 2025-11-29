@@ -11,7 +11,10 @@ interface MessageListProps {
   typingText?: string | null;
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ messages, typingText }) => {
+export const MessageList: React.FC<MessageListProps> = ({
+  messages,
+  typingText,
+}) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,10 +24,8 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, typingText }
   console.log(messagesEndRef.current);
 
   return (
-    <div className="flex-1 h-full overflow-y-auto scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent flex flex-col">
-      <div
-        className={`min-h-full flex flex-col p-4 gap-4 justify-end`}
-      >
+    <div className="flex-1  flex flex-col">
+      <div className={`min-h-full flex flex-col p-4 gap-4 justify-end`}>
         {messages.length === 0 && (
           <div className="text-center text-stone-500 text-sm absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
             <p>Encrypted connection established.</p>

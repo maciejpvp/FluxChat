@@ -159,7 +159,7 @@ export const ChatScreen = () => {
         />
       </div>
 
-      <div className="flex-1 overflow-y-auto relative">
+      <div className="flex-1 overflow-y-auto relative custom-scrollbar">
         <MessageList messages={messages} typingText={remoteTypingText} />
       </div>
 
