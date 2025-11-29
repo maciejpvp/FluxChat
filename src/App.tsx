@@ -1,8 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { AppMode, Message, FileTransfer } from "./types";
 import { generateId, base64ToAb } from "./utils/common";
 import { usePeerConnection } from "./hooks/usePeerConnection";
 import { useVoiceConnection } from "./hooks/useVoiceConnection";
+import { useSoundEffects } from "./hooks/useSoundEffects";
 import { GlobalContext } from "./context/GlobalContext";
 import { Header } from "./components/Header";
 import { HomeScreen } from "./screens/Home";
@@ -17,6 +18,14 @@ export default function App() {
     Record<string, FileTransfer>
   >({});
   const [remoteTypingText, setRemoteTypingText] = useState<string | null>(null);
+
+  const {
+    playNotification,
+    playRingtone,
+    stopRingtone,
+    playCallWait,
+    stopCallWait,
+  } = useSoundEffects();
 
   const addMessage = useCallback((msg: Message) => {
     setMessages((prev) => [...prev, msg]);
@@ -93,6 +102,10 @@ export default function App() {
 
         if (msg.type === "TEXT") {
           addMessage({ ...msg, sender: "STRANGER" });
+          // Only play notification sound when page is not visible
+          if (document.visibilityState === "hidden") {
+            playNotification();
+          }
         } else if (msg.type === "FILE_INFO" && msg.fileInfo) {
           updateFileTransfer(msg.fileInfo.id, {
             id: msg.fileInfo.id,
@@ -149,8 +162,24 @@ export default function App() {
       handleIncomingOffer,
       handleIncomingAnswer,
       handleEndSignal,
+      playNotification,
     ],
   );
+
+  // Handle voice call sounds
+  useEffect(() => {
+    if (voiceStatus === "incoming") {
+      playRingtone();
+    } else if (voiceStatus === "calling") {
+      playCallWait();
+    } else if (voiceStatus === "connected") {
+      stopRingtone();
+      stopCallWait();
+    } else if (voiceStatus === "idle") {
+      stopRingtone();
+      stopCallWait();
+    }
+  }, [voiceStatus, playRingtone, stopRingtone, playCallWait, stopCallWait]);
 
   return (
     <GlobalContext.Provider
