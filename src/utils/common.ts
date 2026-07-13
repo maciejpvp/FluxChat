@@ -17,28 +17,27 @@ export const compressData = (data: any): string => {
         keyK = data.keyJson.k;
     }
 
-    let minSdp = data.sdp;
-    if (typeof minSdp === 'string') {
-        minSdp = minSdp
-            .replace("v=0\r\n", "")
-            .replace("s=-\r\n", "")
-            .replace("t=0 0\r\n", "")
-            .replace("a=extmap-allow-mixed\r\n", "")
-            .replace("a=msid-semantic: WMS\r\n", "");
-    } else if (minSdp && minSdp.sdp) {
-        minSdp = minSdp.sdp
-            .replace("v=0\r\n", "")
-            .replace("s=-\r\n", "")
-            .replace("t=0 0\r\n", "")
-            .replace("a=extmap-allow-mixed\r\n", "")
-            .replace("a=msid-semantic: WMS\r\n", "");
+    let rawSdp: string = '';
+    let sdpType: string = '';
+    if (typeof data.sdp === 'string') {
+        rawSdp = data.sdp;
+        sdpType = keyK ? 'offer' : 'answer';
+    } else if (data.sdp && data.sdp.sdp) {
+        rawSdp = data.sdp.sdp;
+        sdpType = data.sdp.type ?? (keyK ? 'offer' : 'answer');
     }
 
-    const payload = [minSdp, keyK];
+    const minSdp = rawSdp
+        .replace("v=0\r\n", "")
+        .replace("s=-\r\n", "")
+        .replace("t=0 0\r\n", "")
+        .replace("a=extmap-allow-mixed\r\n", "")
+        .replace("a=msid-semantic: WMS\r\n", "");
+
+    const payload = [minSdp, keyK, sdpType];
 
     const jsonString = JSON.stringify(payload);
     const compressed = pako.deflate(jsonString);
-    console.log(compressed)
     return abToBase64(compressed.buffer);
 };
 
@@ -48,7 +47,8 @@ export const decompressData = (compressed: string): any => {
         const decompressed = pako.inflate(new Uint8Array(binary), { to: 'string' });
         const payload = JSON.parse(decompressed);
 
-        const [minSdp, keyK] = payload;
+        const [minSdp, keyK, sdpType] = payload;
+        const type: string = sdpType ?? (keyK ? 'offer' : 'answer');
 
         const firstLineEnd = minSdp.indexOf('\r\n');
         if (firstLineEnd === -1) throw new Error("Invalid SDP format");
@@ -60,12 +60,10 @@ export const decompressData = (compressed: string): any => {
             oLine +
             "s=-\r\n" +
             "t=0 0\r\n" +
-            "a=extmap-allow-mixed\r\n" +
-            "a=msid-semantic: WMS\r\n" +
             rest;
 
         const result: any = {
-            sdp: { type: keyK ? 'offer' : 'answer', sdp: fullSdp }
+            sdp: { type, sdp: fullSdp }
         };
 
         if (keyK) {
